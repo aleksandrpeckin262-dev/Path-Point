@@ -5,14 +5,14 @@ import app_config
 
 # Позиции спавна
 spawn_positions = [
-    (app_config.point_position_1_X, app_config.point_position_1_Y),  # 1
-    (app_config.point_position_2_X, app_config.point_position_2_Y),  # 2
-    (app_config.point_position_3_X, app_config.point_position_3_Y),  # 3
-    (app_config.point_position_4_X, app_config.point_position_4_Y),  # 4
-    (app_config.point_position_5_X, app_config.point_position_5_Y),  # 5
-    (app_config.point_position_6_X, app_config.point_position_6_Y),  # 6
-    (app_config.point_position_7_X, app_config.point_position_7_Y),  # 7
-    (app_config.point_position_8_X, app_config.point_position_8_Y)   # 8
+    (app_config.point_position_0_X, app_config.point_position_0_Y),  # 1
+    (app_config.point_position_1_X, app_config.point_position_1_Y),  # 2
+    (app_config.point_position_2_X, app_config.point_position_2_Y),  # 3
+    (app_config.point_position_3_X, app_config.point_position_3_Y),  # 4
+    (app_config.point_position_4_X, app_config.point_position_4_Y),  # 5
+    (app_config.point_position_5_X, app_config.point_position_5_Y),  # 6
+    (app_config.point_position_6_X, app_config.point_position_6_Y),  # 7
+    (app_config.point_position_7_X, app_config.point_position_7_Y)   # 8
 ]
 
 # Класс окна

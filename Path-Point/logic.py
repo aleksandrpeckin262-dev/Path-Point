@@ -1,5 +1,6 @@
 import random
 import time
+import math
 import app_config
 import threading
 
@@ -15,41 +16,72 @@ spawn_positions = [
     (app_config.point_position_7_X, app_config.point_position_7_Y)   # 7
 ]
 
+# Базовые повороты
+base_rotations = [
+    app_config.point_rotation_0, app_config.point_rotation_1,
+    app_config.point_rotation_2, app_config.point_rotation_3,
+    app_config.point_rotation_4, app_config.point_rotation_5,
+    app_config.point_rotation_6, app_config.point_rotation_7
+]
+
 active_points = [] 
 
-INTERVAL = app_config.tik_rate / 100  # Раз в тик
+SPAWN_INTERVAL = app_config.tik_rate / 100  # Раз в тик
+
+number_point = 0
+
+point_speed_x = 0
+point_speed_y = 0
 
 def spawn_point():
+    global number_point
+    global active_points
+    
+    # Случайная позиция
     position = random.randint(0, 7)
                
-    position_x = 0
-    position_y = 0
-    point_rotation = 0
+    # Базовые значения
+    base_x, base_y = spawn_positions[position]
+    base_rotation = base_rotations[position]
+    
+    # Рандом
+    position_x = base_x + random.randint(app_config.point_X_random_min, app_config.point_X_random_max)
+    position_y = base_y + random.randint(app_config.point_Y_random_min, app_config.point_Y_random_max)
+    point_rotation = base_rotation + random.randint(app_config.point_rotation_min, app_config.point_rotation_max)
+    
+    point_speed_x = random.randint(app_config.point_speed_random_min, app_config.point_speed_random_max)
+    point_speed_y = random.randint(app_config.point_speed_random_min, app_config.point_speed_random_max)
+    
+    # Обновление
+    number_point += 1
+    active_points.append((position_x, position_y, point_rotation, point_speed_x, point_speed_y))
+    
+    # Вывод
+    print(f"--- Спавн точки #{number_point} (тартовая позиция: {position}) ---")
+    print(f"Позиция: X={position_x}, Y={position_y}")
+    print(f"Поворот: {point_rotation}")
+    print(f"Скорость: X={point_speed_x}, Y={point_speed_y}")
+    print(f"Всего точек: {len(active_points)}")
+    print(f"Массив точек: {active_points}")
+    print()
+    
+def update_position(dt):
+    
+    global active_points
     
     
-    if position == 0:
-        position_x = app_config.point_position_0_X + random.randint(point_X_random_min, point_X_random_max)
-        position_y = point_position_0_Y + random.randint(point_Y_random_min, point_Y_random_max)
-        point_rotation = point_rotation_1 + random.randint(point_rotation_min, point_rotation_max)
-        print("Стартовая точка")
-        print(position)
-        print("Позиция X")
-        print(position_x)
-        print("Позиция Y")
-        print(position_y)
-        print("Позиция Y")
-        print(position_y)
-        print("Поворот")
-        print(position_y)
-    time.sleep(INTERVAL)
-        
+    
+
 while True:
-    start_time = time.time()  # Засекаем время начала
+    if number_point >= app_config.limit_point:
+        break
+        
+    start_time = time.time()#---------------------------Засекаем время начала
     
-    spawn_point()     # Запускаем вашу функцию с кучей if
+    spawn_point()#--------------------------------------Запуск
     
-    execution_time = time.time() - start_time  # Считаем, сколько она шла
+    execution_time = time.time() - start_time#----------Считаем, сколько она шла
     
     # Считаем, сколько осталось спать (чтобы в сумме было 5 секунд)
-    sleep_time = max(0, INTERVAL - execution_time) 
+    sleep_time = max(0, SPAWN_INTERVAL - execution_time) 
     time.sleep(sleep_time)
