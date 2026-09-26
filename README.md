@@ -3,7 +3,8 @@
 Программа для эффекта "созвездий" - Constellation Effect.
 Программа позволяет генерировать такие видео, полностью настраивать весь проект, есть режим скринсейвера.
 
-![Up<?xml version="1.0" standalone="no"?>
+<img width="1153" height="989" alt="logo" src="https://github.com/user-attachments/assets/bd6d4446-2e41-404a-9892-8eac94a6c175" />
+<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
  "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
 <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
@@ -79,4 +80,3 @@ l32 -25 -242 -665 -242 -665 -62 -7 c-34 -4 -76 -14 -95 -23 -77 -36 -54 -56
 66 32 132 99 162 165 33 72 31 180 -6 253 -72 147 -241 222 -385 171z"/>
 </g>
 </svg>
-loading logo.svg…]()
