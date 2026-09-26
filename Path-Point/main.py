@@ -3,38 +3,23 @@ import random
 import time
 import app_config
 
-# Позиции спавна
-spawn_positions = [
-    (app_config.point_position_0_X, app_config.point_position_0_Y),  # 1
-    (app_config.point_position_1_X, app_config.point_position_1_Y),  # 2
-    (app_config.point_position_2_X, app_config.point_position_2_Y),  # 3
-    (app_config.point_position_3_X, app_config.point_position_3_Y),  # 4
-    (app_config.point_position_4_X, app_config.point_position_4_Y),  # 5
-    (app_config.point_position_5_X, app_config.point_position_5_Y),  # 6
-    (app_config.point_position_6_X, app_config.point_position_6_Y),  # 7
-    (app_config.point_position_7_X, app_config.point_position_7_Y)   # 8
-]
+screen_width, screen_height = arcade.get_display_size()
+
+screen_size = screen_width + screen_height # Размер монитора
+
+print(screen_size)
 
 # Класс окна
 class ConstellationWindow(arcade.Window):
     def __init__(self):
         # Инициализируем окно размерами и именем из твоего конфига
-        super().__init__(app_config.WINDOW_SIZE_X, app_config.WINDOW_SIZE_Y, app_config.NAME_WINDOW)
+        super().__init__(screen_width, screen_height, app_config.NAME_WINDOW)
         
-        # Список точек
-        self.active_points = [] 
-
-    #  Основная логика
-    def update(self, delta_time):
-
-        pass
-
     # Отрисовка
     def on_draw(self):
         # Очистка экрана каждый кадр
         self.clear()
         
-        pass
 
 # Инициализация
 def main():

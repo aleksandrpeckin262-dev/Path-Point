@@ -1,12 +1,7 @@
 # Настройка спавна точек
-point_quantity_step = 5
 point_speed_x = 2          # То, на сколько пикселей движется точка по x за 1 тик
 point_speed_y = 2          # То, на сколько пикселей движется точка по y за 1 тик
 tik_rate = 10              # Тик рейт программы
-point_gravity = 50         # Радиус того, с какого момента соединяются точки линиями
-line_width = 4             # Толщина линий
-point_size = 4             # 4 пикселя в диаметре
-limit_point = 100          # Лимит точек
 
 # Настройка позиций спавна точек
 point_position_0_X = -10
@@ -66,7 +61,11 @@ point_Y_random_min = -60
 point_speed_random_max = 8
 point_speed_random_min = 1
 
-# настройка GUI
+# Настройка GUI
 NAME_WINDOW = "Path-Point"
-WINDOW_SIZE_X = 800
-WINDOW_SIZE_Y = 600
+
+# Коофициенты размеров UI
+point_size = 200#----------------То, насколько нужно разделить screen_size
+point_gravity = 5#---------------То, насколько нужно разделить screen_size
+limit_point = 20#----------------И так далее
+line_width = 1000
