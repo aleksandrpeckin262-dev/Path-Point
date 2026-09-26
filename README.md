@@ -1,4 +1,4 @@
-<img width="1153" height="989" alt="logo" src="https://github.com/user-attachments/assets/e55ebf93-7ceb-4847-b18b-d91fd0c2113e" /># Path-Point
+
 
 Программа для эффекта "созвездий" - Constellation Effect.
 Программа позволяет генерировать такие видео, полностью настраивать весь проект, есть режим скринсейвера.
