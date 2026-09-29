@@ -1,35 +1,8 @@
-import arcade
-import random
-import time
-import app_config
+from logic import start_logic
+from visualizer import main as run_visualizer
 
-screen_width, screen_height = arcade.get_display_size()
+# Запускаем логику
+start_logic()
 
-screen_size = screen_width + screen_height # Размер монитора
-
-print(screen_size)
-
-# Класс окна
-class ConstellationWindow(arcade.Window):
-    def __init__(self):
-        # Инициализируем окно размерами и именем из твоего конфига
-        super().__init__(screen_width, screen_height, app_config.NAME_WINDOW)
-        
-    # Отрисовка
-    def on_draw(self):
-        # Очистка экрана каждый кадр
-        self.clear()
-        
-
-# Инициализация
-def main():
-    window = ConstellationWindow()
-    
-    # Тик рейт
-    window.set_update_rate(1 / app_config.tik_rate)
-    
-    # Запуск цикла
-    arcade.run()
-
-if __name__ == "__main__":
-    main()
+# Запускаем отрисовку (блокирует главный поток)
+run_visualizer()
