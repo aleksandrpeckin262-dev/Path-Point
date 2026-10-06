@@ -1,8 +1,8 @@
 from logic import start_logic
 from visualizer import main as run_visualizer
 
-# Запускаем логику
+# Логика
 start_logic()
 
-# Запускаем отрисовку (блокирует главный поток)
+# Отрисовка
 run_visualizer()

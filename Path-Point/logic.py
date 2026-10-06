@@ -127,7 +127,7 @@ def spawn_point():
     point_speed_x = speed * math.cos(math.radians(point_rotation))
     point_speed_y = speed * math.sin(math.radians(point_rotation))
     
-    # Округляем до целых
+    # Округление до целых
     point_speed_x = int(point_speed_x)
     point_speed_y = int(point_speed_y)
     

@@ -114,8 +114,12 @@ point_speed_random_min = -8
 NAME_WINDOW = "Path-Point"
 
 # Коэффициенты размеров UI
-point_size = 150
+point_size = 1000
 point_gravity = 5
 limit_point = 200
 line_width = 256
 point_collision = 15
+
+# Полупрозрачные линии от 1 до 255
+line_alpha_near = 255  # максимум
+line_alpha_far = 1    # минимум
