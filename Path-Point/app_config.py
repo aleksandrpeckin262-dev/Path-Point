@@ -1,7 +1,8 @@
 # Настройка спавна точек
 point_speed_x = 0
 point_speed_y = 0
-tik_rate = 2
+tik_rate = 0.01
+spawn_interval = 0.01
 
 # Настройка позиций спавна точек (проценты от размеров монитора)
 # ВАЖНО: В arcade Y=0 — это НИЗ экрана, Y=100 — это ВЕРХ!
@@ -107,8 +108,8 @@ point_Y_random_max_7 = 0
 point_Y_random_min_7 = 0
 
 # Настройка рандома скоростей точек
-point_speed_random_max = 8
-point_speed_random_min = -8
+point_speed_random_max = 200
+point_speed_random_min = -200
 
 # Настройка GUI
 NAME_WINDOW = "Path-Point"

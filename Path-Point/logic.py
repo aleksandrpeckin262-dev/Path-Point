@@ -77,34 +77,29 @@ random_y_max = [
 
 # Индивидуальные погрешности поворота для каждой базы
 rotation_min = [
-    app_config.point_rotation_0_min,
-    app_config.point_rotation_1_min,
-    app_config.point_rotation_2_min,
-    app_config.point_rotation_3_min,
-    app_config.point_rotation_4_min,
-    app_config.point_rotation_5_min,
-    app_config.point_rotation_6_min,
-    app_config.point_rotation_7_min,
+    app_config.point_rotation_0_min, app_config.point_rotation_1_min,
+    app_config.point_rotation_2_min, app_config.point_rotation_3_min,
+    app_config.point_rotation_4_min, app_config.point_rotation_5_min,
+    app_config.point_rotation_6_min, app_config.point_rotation_7_min,
 ]
 
 rotation_max = [
-    app_config.point_rotation_0_max,
-    app_config.point_rotation_1_max,
-    app_config.point_rotation_2_max,
-    app_config.point_rotation_3_max,
-    app_config.point_rotation_4_max,
-    app_config.point_rotation_5_max,
-    app_config.point_rotation_6_max,
-    app_config.point_rotation_7_max,
+    app_config.point_rotation_0_max, app_config.point_rotation_1_max,
+    app_config.point_rotation_2_max, app_config.point_rotation_3_max,
+    app_config.point_rotation_4_max, app_config.point_rotation_5_max,
+    app_config.point_rotation_6_max, app_config.point_rotation_7_max,
 ]
 
 active_points = [] 
 collision_pairs = []
 
-SPAWN_INTERVAL = app_config.tik_rate * 0.0001
-UPDATE_INTERVAL = app_config.tik_rate / 100
+SPAWN_INTERVAL = app_config.spawn_interval
+UPDATE_INTERVAL = app_config.tik_rate
 
 points_lock = threading.Lock()
+
+# Переменная для хранения времени прошлого тика движения
+last_move_time = time.time()
 
 def spawn_point():
     position = random.randint(0, 7)
@@ -127,23 +122,26 @@ def spawn_point():
     point_speed_x = speed * math.cos(math.radians(point_rotation))
     point_speed_y = speed * math.sin(math.radians(point_rotation))
     
-    # Округление до целых
-    point_speed_x = int(point_speed_x)
-    point_speed_y = int(point_speed_y)
+    # ВАЖНО: УБРАЛ int(), чтобы скорость осталась float (дробной).
+    # Если оставить int, скорость может стать 0, и точка не будет двигаться.
     
     # Защита от нулевой скорости
     if point_speed_x == 0 and point_speed_y == 0:
-        point_speed_x = 1
+        point_speed_x = 1.0
     
     with points_lock:
         active_points.append((position_x, position_y, point_rotation, point_speed_x, point_speed_y))
 
-def update_position():
+# ИЗМЕНЕНО: Теперь функция принимает аргумент dt (дельта-тайм)
+def update_position(dt):
     with points_lock:
         for i in range(len(active_points)):
             x, y, rotation, speed_x, speed_y = active_points[i]
-            new_x = x + speed_x
-            new_y = y + speed_y
+            
+            # ПРИМЕНЯЕМ ДЕЛЬТА-ТАЙМ: Позиция += Скорость * dt
+            new_x = x + speed_x * dt
+            new_y = y + speed_y * dt
+            
             active_points[i] = (new_x, new_y, rotation, speed_x, speed_y)
 
 def delete_point():
@@ -192,10 +190,16 @@ def spawn_loop():
         else:
             time.sleep(0.01)
 
+# ИСПРАВЛЕНО: Убрали лишний аргумент (dt) из сигнатуры функции
 def move_loop(): 
+    global last_move_time
     while True:
+        current_time = time.time()
+        dt = current_time - last_move_time
+        last_move_time = current_time
+        
         start_time = time.time()
-        update_position()
+        update_position(dt) # Передаем dt в функцию движения
         sleep_time = max(0, UPDATE_INTERVAL - (time.time() - start_time))
         time.sleep(sleep_time)
 
