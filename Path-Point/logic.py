@@ -4,7 +4,37 @@ import math
 import app_config
 import threading
 import arcade
+import ctypes
+import os
 
+# --- Шаг 1: Подключение скомпилированной C-библиотеки ---
+dll_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "physics.dll")
+try:
+    physics = ctypes.CDLL(dll_path)
+except Exception as e:
+    raise FileNotFoundError(
+        f"Не удалось загрузить physics.dll по пути {dll_path}. "
+        f"Убедитесь, что вы скомпилировали его в MSYS2 командой: gcc -O3 -shared physics.c -o physics.dll"
+    ) from e
+
+# --- Шаг 2: Описание структур данных C для Python ---
+class PointC(ctypes.Structure):
+    _fields_ = [
+        ("x", ctypes.c_double),
+        ("y", ctypes.c_double),
+        ("rotation", ctypes.c_double),
+        ("speed_x", ctypes.c_double),
+        ("speed_y", ctypes.c_double)
+    ]
+
+class CollisionPairC(ctypes.Structure):
+    _fields_ = [
+        ("index1", ctypes.c_int32),
+        ("index2", ctypes.c_int32)
+    ]
+
+
+# --- Инициализация геометрии и базовых позиций ---
 screen_width, screen_height = arcade.get_display_size()
 if not screen_width or not screen_height:
     screen_width, screen_height = 1920, 1080
@@ -61,7 +91,7 @@ random_y_min = [
     screen_height * app_config.point_Y_random_min_4 / 100,
     screen_height * app_config.point_Y_random_min_5 / 100,
     screen_height * app_config.point_Y_random_min_6 / 100,
-    screen_height * app_config.point_Y_random_min_7 / 100,
+    screen_height * app_config.point_Y_random_max_7 / 100,
 ]
 
 random_y_max = [
@@ -97,84 +127,116 @@ SPAWN_INTERVAL = app_config.spawn_interval
 UPDATE_INTERVAL = app_config.tik_rate
 
 points_lock = threading.Lock()
-
-# Переменная для хранения времени прошлого тика движения
 last_move_time = time.time()
+
 
 def spawn_point():
     position = random.randint(0, 7)
     base_x, base_y = spawn_positions[position]
     base_rotation = base_rotations[position]
     
-    # Позиция с погрешностью
     position_x = base_x + random.randint(int(random_x_min[position]), int(random_x_max[position]))
     position_y = base_y + random.randint(int(random_y_min[position]), int(random_y_max[position]))
     
-    # Поворот с индивидуальной погрешностью
     rot_min = rotation_min[position]
     rot_max = rotation_max[position]
     if rot_min > rot_max:
         rot_min, rot_max = rot_max, rot_min
     point_rotation = base_rotation + random.randint(rot_min, rot_max)
     
-    # Вычисляем скорости ИЗ поворота
     speed = random.randint(abs(app_config.point_speed_random_min), abs(app_config.point_speed_random_max))
     point_speed_x = speed * math.cos(math.radians(point_rotation))
     point_speed_y = speed * math.sin(math.radians(point_rotation))
     
-    # ВАЖНО: УБРАЛ int(), чтобы скорость осталась float (дробной).
-    # Если оставить int, скорость может стать 0, и точка не будет двигаться.
-    
-    # Защита от нулевой скорости
     if point_speed_x == 0 and point_speed_y == 0:
         point_speed_x = 1.0
     
     with points_lock:
         active_points.append((position_x, position_y, point_rotation, point_speed_x, point_speed_y))
 
-# ИЗМЕНЕНО: Теперь функция принимает аргумент dt (дельта-тайм)
+
+# --- Измененные функции с гарантированным сохранением ссылок ---
+
 def update_position(dt):
+    if not active_points:
+        return
+
     with points_lock:
-        for i in range(len(active_points)):
-            x, y, rotation, speed_x, speed_y = active_points[i]
-            
-            # ПРИМЕНЯЕМ ДЕЛЬТА-ТАЙМ: Позиция += Скорость * dt
-            new_x = x + speed_x * dt
-            new_y = y + speed_y * dt
-            
-            active_points[i] = (new_x, new_y, rotation, speed_x, speed_y)
+        count = len(active_points)
+        c_array = (PointC * count)()
+        
+        for i, p in enumerate(active_points):
+            c_array[i] = PointC(
+                ctypes.c_double(p[0]),
+                ctypes.c_double(p[1]),
+                ctypes.c_double(p[2]),
+                ctypes.c_double(p[3]),
+                ctypes.c_double(p[4])
+            )
+        
+        physics.update_position_c(c_array, ctypes.c_int32(count), ctypes.c_double(dt))
+        
+        # ВАЖНО: Обновляем старый список на месте, не создавая новый объект в памяти!
+        for i in range(count):
+            p = c_array[i]
+            active_points[i] = (float(p.x), float(p.y), float(p.rotation), float(p.speed_x), float(p.speed_y))
+
+
+def detect_collisions():
+    global collision_pairs
+    if not active_points:
+        return
+
+    with points_lock:
+        count = len(active_points)
+        c_array = (PointC * count)()
+        for i, p in enumerate(active_points):
+            c_array[i] = PointC(
+                ctypes.c_double(p[0]),
+                ctypes.c_double(p[1]),
+                ctypes.c_double(p[2]),
+                ctypes.c_double(p[3]),
+                ctypes.c_double(p[4])
+            )
+        
+        radius_sq = (screen_size / app_config.point_collision) ** 2
+        
+        max_pairs = 5000
+        c_pairs = (CollisionPairC * max_pairs)()
+        
+        actual_pairs_count = physics.detect_collisions_c(
+            c_array, 
+            ctypes.c_int32(count), 
+            ctypes.c_double(radius_sq), 
+            c_pairs,
+            ctypes.c_int32(max_pairs)
+        )
+        
+        new_pairs = []
+        for i in range(actual_pairs_count):
+            idx1 = c_pairs[i].index1
+            idx2 = c_pairs[i].index2
+            if idx1 < count and idx2 < count:
+                new_pairs.append((active_points[idx1], active_points[idx2]))
+        
+        # Полностью перезаписываем содержимое глобального списка коллизий
+        collision_pairs.clear()
+        collision_pairs.extend(new_pairs)
+
 
 def delete_point():
     with points_lock:
         i = 0
-        margin = 10  # Запас, чтобы точки не умирали на границе
+        margin = 10  
         while i < len(active_points):
             x, y, rotation, speed_x, speed_y = active_points[i]
-            
             if x > screen_width + margin or y > screen_height + margin or x < -margin or y < -margin:
                 active_points.pop(i)
             else:
                 i += 1
 
-def detect_collisions():
-    global collision_pairs
-    
-    with points_lock:
-        pairs = []
-        radius_sq = (screen_size / app_config.point_collision) ** 2
-        
-        for i in range(len(active_points)):
-            for j in range(i + 1, len(active_points)):
-                x1, y1 = active_points[i][0], active_points[i][1]
-                x2, y2 = active_points[j][0], active_points[j][1]
-                
-                dist_sq = (x2 - x1) ** 2 + (y2 - y1) ** 2
-                
-                if dist_sq <= radius_sq:
-                    pairs.append((active_points[i], active_points[j]))
-        
-        collision_pairs.clear()
-        collision_pairs.extend(pairs)
+
+# --- Фоновые циклы и потоки ---
 
 def spawn_loop():    
     while True:
@@ -190,7 +252,7 @@ def spawn_loop():
         else:
             time.sleep(0.01)
 
-# ИСПРАВЛЕНО: Убрали лишний аргумент (dt) из сигнатуры функции
+
 def move_loop(): 
     global last_move_time
     while True:
@@ -199,9 +261,10 @@ def move_loop():
         last_move_time = current_time
         
         start_time = time.time()
-        update_position(dt) # Передаем dt в функцию движения
+        update_position(dt) 
         sleep_time = max(0, UPDATE_INTERVAL - (time.time() - start_time))
         time.sleep(sleep_time)
+
 
 def delete_loop():  
     while True:
@@ -210,13 +273,14 @@ def delete_loop():
         sleep_time = max(0, UPDATE_INTERVAL - (time.time() - start_time))
         time.sleep(sleep_time)
 
+
 def collision_loop():
     while True:
         start_time = time.time()
         detect_collisions()
         sleep_time = max(0, UPDATE_INTERVAL - (time.time() - start_time))
         time.sleep(sleep_time)
-
+        
 def start_logic():
     t1 = threading.Thread(target=spawn_loop, daemon=True)
     t2 = threading.Thread(target=move_loop, daemon=True)
