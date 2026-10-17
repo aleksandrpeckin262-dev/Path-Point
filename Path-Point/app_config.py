@@ -3,6 +3,8 @@ point_speed_x = 0
 point_speed_y = 0
 tik_rate = 0.001
 spawn_interval = 0.01
+video_FPS = 60
+max_frames = 60
 
 # Настройка позиций спавна точек (проценты от размеров монитора)
 # ВАЖНО: В arcade Y=0 — это НИЗ экрана, Y=100 — это ВЕРХ!

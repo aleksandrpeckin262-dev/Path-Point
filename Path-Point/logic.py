@@ -6,6 +6,8 @@ import threading
 import arcade
 import ctypes
 import os
+import pyautogui
+from datetime import datetime
 
 # --- Шаг 1: Подключение скомпилированной C-библиотеки ---
 dll_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "physics.dll")
@@ -40,6 +42,18 @@ if not screen_width or not screen_height:
     screen_width, screen_height = 1920, 1080
 
 screen_size = screen_width + screen_height
+
+# Флаг того, что у нас режим записи (1), или режим генерации без записи (0)
+video_flag = 1
+
+# Имя папки создаваемое в reate folder
+new_folder_name = "video_1"
+
+# ФПС для записи видео
+VIDEO_FPS = app_config.video_FPS
+
+# Номер кадра в записи
+frame_number = 1
 
 # Базовые позиции (в пикселях, из процентов)
 spawn_positions = [
@@ -234,7 +248,37 @@ def delete_point():
                 active_points.pop(i)
             else:
                 i += 1
-
+                
+def create_folder(video_flag, new_folder_name):
+    if video_flag == 1:
+        # Собираем путь к нужной папке (например, ./video/video_1)
+        path = os.path.join(".", "video", new_folder_name)
+    
+        # Проверяем, существует ли папка, и создаем ее
+        if not os.path.exists(path):
+          os.mkdir(path)
+          print(f"Папка успешно создана: {path}")
+        else:
+          print("Такая папка уже есть!")
+    else:
+        print("Флаг 0!")
+        
+def make_scrinshot(video_FPS, video_flag, frame_number, path):
+    if video_flag == 1:
+        # Скриншот
+        screenshot = pyautogui.screenshot()
+        # Создание имени для кадра
+        screenshot_name = f"frame_{frame_number}.png"
+        # Увеличиваем счетчик кадров
+        frame_number += 1
+        # Создание полного пути для сохранения
+        screenshot_path = os.path.join(path, screenshot_name)
+        # Сохранение скриншота
+        screenshot.save(screenshot_path)
+        print(f"Скриншот успешно сохранен в: {screenshot_path}")
+    else:
+        print("Флаг 0!")
+        
 
 # --- Фоновые циклы и потоки ---
 
@@ -281,15 +325,46 @@ def collision_loop():
         sleep_time = max(0, UPDATE_INTERVAL - (time.time() - start_time))
         time.sleep(sleep_time)
         
-def start_logic():
+def video_record_loop():
+        global frame_number
+        # Рассчитываем задержку между кадрами на основе твоего VIDEO_FPS
+        frame_delay = 1.0 / VIDEO_FPS
+        path = os.path.join(".", "video", new_folder_name)
+        
+        # Сколько нужно снять кадров
+        max_frames = app_config.max_frames
+    
+         # Сначала один раз создаем папку
+        create_folder(video_flag, new_folder_name)
+
+        while video_flag == 1 and frame_number <= max_frames:
+            start_time = time.time()
+    
+            # Делаем скриншот через твою функцию
+            make_scrinshot(VIDEO_FPS, video_flag, frame_number, path)
+            frame_number += 1  # Увеличиваем счетчик кадра для следующей итерации
+
+            # Выдерживаем точный FPS записи
+            execution_time = time.time() - start_time
+            sleep_time = max(0, frame_delay - execution_time)
+            time.sleep(sleep_time)
+        
+def start_logic(video_flag):
     t1 = threading.Thread(target=spawn_loop, daemon=True)
     t2 = threading.Thread(target=move_loop, daemon=True)
     t3 = threading.Thread(target=delete_loop, daemon=True)
     t4 = threading.Thread(target=collision_loop, daemon=True)
     
+    t_video = threading.Thread(target=video_record_loop, daemon=True)
+    
     t1.start()
     t2.start()
     t3.start()
     t4.start()
+    
+    if video_flag == 1:
+        t_video.start()
+    else:
+        pass
     
     return t1, t2, t3, t4
