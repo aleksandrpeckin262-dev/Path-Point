@@ -140,6 +140,9 @@ collision_pairs = []
 SPAWN_INTERVAL = app_config.spawn_interval
 UPDATE_INTERVAL = app_config.tik_rate
 
+SCRINSHOT_START_SLEEP_MAX = app_config.scrinshot_start_sleep
+SCRINSHOT_START_SLEEP = 1
+
 points_lock = threading.Lock()
 last_move_time = time.time()
 
@@ -263,8 +266,10 @@ def create_folder(video_flag, new_folder_name):
     else:
         print("Флаг 0!")
         
-def make_scrinshot(video_FPS, video_flag, frame_number, path):
-    if video_flag == 1:
+def make_scrinshot(video_FPS, video_flag, frame_number, path, SCRINSHOT_START_SLEEP_MAX):
+    global SCRINSHOT_START_SLEEP
+    
+    if video_flag == 1 and SCRINSHOT_START_SLEEP >= SCRINSHOT_START_SLEEP_MAX:
         # Скриншот
         screenshot = pyautogui.screenshot()
         # Создание имени для кадра
@@ -277,7 +282,8 @@ def make_scrinshot(video_FPS, video_flag, frame_number, path):
         screenshot.save(screenshot_path)
         print(f"Скриншот успешно сохранен в: {screenshot_path}")
     else:
-        print("Флаг 0!")
+        print("!")
+        SCRINSHOT_START_SLEEP += 1
         
 
 # --- Фоновые циклы и потоки ---
@@ -327,6 +333,7 @@ def collision_loop():
         
 def video_record_loop():
         global frame_number
+        global SCRINSHOT_START_SLEEP
         # Рассчитываем задержку между кадрами на основе твоего VIDEO_FPS
         frame_delay = 1.0 / VIDEO_FPS
         path = os.path.join(".", "video", new_folder_name)
@@ -341,7 +348,7 @@ def video_record_loop():
             start_time = time.time()
     
             # Делаем скриншот через твою функцию
-            make_scrinshot(VIDEO_FPS, video_flag, frame_number, path)
+            make_scrinshot(VIDEO_FPS, video_flag, frame_number, path, SCRINSHOT_START_SLEEP_MAX)
             frame_number += 1  # Увеличиваем счетчик кадра для следующей итерации
 
             # Выдерживаем точный FPS записи

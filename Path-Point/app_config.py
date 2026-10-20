@@ -6,6 +6,8 @@ spawn_interval = 0.01
 video_FPS = 60
 max_frames = 60
 
+scrinshot_start_sleep = 16 # Кадров
+
 # Настройка позиций спавна точек (проценты от размеров монитора)
 # ВАЖНО: В arcade Y=0 — это НИЗ экрана, Y=100 — это ВЕРХ!
 point_position_0_X = 0    # Левый край, центр
