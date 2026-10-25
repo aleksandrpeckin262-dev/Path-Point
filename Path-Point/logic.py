@@ -6,6 +6,8 @@ import threading
 import arcade
 import ctypes
 import os
+from datetime import datetime
+from video_editor import create_video_from_images
 
 # --- Шаг 1: Подключение скомпилированной C-библиотеки ---
 dll_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "physics.dll")
@@ -33,13 +35,24 @@ class CollisionPairC(ctypes.Structure):
         ("index2", ctypes.c_int32)
     ]
 
-
 # --- Инициализация геометрии и базовых позиций ---
 screen_width, screen_height = arcade.get_display_size()
 if not screen_width or not screen_height:
     screen_width, screen_height = 1920, 1080
 
 screen_size = screen_width + screen_height
+
+# Флаг того, что у нас режим записи (1), или режим генерации без записи (0)
+video_flag = 1
+
+# Имя папки создаваемое в create_folder
+new_folder_name = "video_1"
+
+# ФПС для записи видео
+VIDEO_FPS = app_config.video_FPS
+
+# Номер кадра в записи
+frame_number = 0
 
 # Базовые позиции (в пикселях, из процентов)
 spawn_positions = [
@@ -91,7 +104,7 @@ random_y_min = [
     screen_height * app_config.point_Y_random_min_4 / 100,
     screen_height * app_config.point_Y_random_min_5 / 100,
     screen_height * app_config.point_Y_random_min_6 / 100,
-    screen_height * app_config.point_Y_random_max_7 / 100,
+    screen_height * app_config.point_Y_random_min_7 / 100,
 ]
 
 random_y_max = [
@@ -120,15 +133,19 @@ rotation_max = [
     app_config.point_rotation_6_max, app_config.point_rotation_7_max,
 ]
 
-active_points = [] 
+active_points = []
 collision_pairs = []
 
 SPAWN_INTERVAL = app_config.spawn_interval
 UPDATE_INTERVAL = app_config.tik_rate
+SCRINSHOT_START_SLEEP_MAX = app_config.scrinshot_start_sleep
+SCRINSHOT_START_SLEEP = 0
 
 points_lock = threading.Lock()
 last_move_time = time.time()
 
+TARGET_FOLDER = r"D:\Path-Point\video\video_1"
+RESULT_VIDEO = r"D:\Path-Point\video\video_1\result.mp4"
 
 def spawn_point():
     position = random.randint(0, 7)
@@ -154,17 +171,13 @@ def spawn_point():
     with points_lock:
         active_points.append((position_x, position_y, point_rotation, point_speed_x, point_speed_y))
 
-
 # --- Измененные функции с гарантированным сохранением ссылок ---
-
 def update_position(dt):
     if not active_points:
         return
-
     with points_lock:
         count = len(active_points)
         c_array = (PointC * count)()
-        
         for i, p in enumerate(active_points):
             c_array[i] = PointC(
                 ctypes.c_double(p[0]),
@@ -173,20 +186,16 @@ def update_position(dt):
                 ctypes.c_double(p[3]),
                 ctypes.c_double(p[4])
             )
-        
         physics.update_position_c(c_array, ctypes.c_int32(count), ctypes.c_double(dt))
-        
         # ВАЖНО: Обновляем старый список на месте, не создавая новый объект в памяти!
         for i in range(count):
             p = c_array[i]
             active_points[i] = (float(p.x), float(p.y), float(p.rotation), float(p.speed_x), float(p.speed_y))
 
-
 def detect_collisions():
     global collision_pairs
     if not active_points:
         return
-
     with points_lock:
         count = len(active_points)
         c_array = (PointC * count)()
@@ -198,12 +207,9 @@ def detect_collisions():
                 ctypes.c_double(p[3]),
                 ctypes.c_double(p[4])
             )
-        
         radius_sq = (screen_size / app_config.point_collision) ** 2
-        
         max_pairs = 5000
         c_pairs = (CollisionPairC * max_pairs)()
-        
         actual_pairs_count = physics.detect_collisions_c(
             c_array, 
             ctypes.c_int32(count), 
@@ -211,18 +217,15 @@ def detect_collisions():
             c_pairs,
             ctypes.c_int32(max_pairs)
         )
-        
         new_pairs = []
         for i in range(actual_pairs_count):
             idx1 = c_pairs[i].index1
             idx2 = c_pairs[i].index2
             if idx1 < count and idx2 < count:
                 new_pairs.append((active_points[idx1], active_points[idx2]))
-        
         # Полностью перезаписываем содержимое глобального списка коллизий
         collision_pairs.clear()
         collision_pairs.extend(new_pairs)
-
 
 def delete_point():
     with points_lock:
@@ -234,10 +237,51 @@ def delete_point():
                 active_points.pop(i)
             else:
                 i += 1
+                
+def create_folder(video_flag, new_folder_name):
+    if video_flag == 1:
+        # Собираем путь к нужной папке (например, ./video/video_1)
+        path = os.path.join(".", "video", new_folder_name)
+    
+        # Проверяем, существует ли папка, и создаем ее
+        if not os.path.exists(path):
+            os.mkdir(path)
+            print(f"Папка успешно создана: {path}")
+        else:
+            print("Такая папка уже есть!")
+    else:
+        print("Флаг 0!")
+        
+def make_scrinshot(video_FPS, video_flag, path, SCRINSHOT_START_SLEEP_MAX, create_video_from_images_func):
+    """
+    Управляет фазой "прогрева" симуляции перед началом записи.
+    Реальное сохранение кадров происходит в on_draw визуализатора через arcade.get_image(),
+    так как OpenGL-контекст доступен только в главном потоке.
+    """
+    global SCRINSHOT_START_SLEEP
+    
+    if video_flag != 1:
+        return
+    
+    # Фаза 1: пропуск начальных кадров (даём симуляции "разогреться")
+    if SCRINSHOT_START_SLEEP < SCRINSHOT_START_SLEEP_MAX:
+        print(f"Пропуск кадра {SCRINSHOT_START_SLEEP}/{SCRINSHOT_START_SLEEP_MAX}")
+        SCRINSHOT_START_SLEEP += 1
+        return
+    
+    # Фаза 2: симуляция разогрелась, визуализатор сам сохраняет кадры в on_draw
+    # Эта функция больше ничего не делает — она просто "разрешила" запись
+    return
 
-
+def video_editor(image_folder, output_path, VIDEO_FPS, create_video_from_images_func):
+    create_video_from_images_func(
+        image_folder=image_folder,
+        output_path=output_path,
+        fps=VIDEO_FPS
+    )
+    print(f"Видео сохранено: {output_path}")
+        
 # --- Фоновые циклы и потоки ---
-
 def spawn_loop():    
     while True:
         with points_lock:
@@ -252,7 +296,6 @@ def spawn_loop():
         else:
             time.sleep(0.01)
 
-
 def move_loop(): 
     global last_move_time
     while True:
@@ -265,14 +308,12 @@ def move_loop():
         sleep_time = max(0, UPDATE_INTERVAL - (time.time() - start_time))
         time.sleep(sleep_time)
 
-
 def delete_loop():  
     while True:
         start_time = time.time()
         delete_point()
         sleep_time = max(0, UPDATE_INTERVAL - (time.time() - start_time))
         time.sleep(sleep_time)
-
 
 def collision_loop():
     while True:
@@ -281,15 +322,56 @@ def collision_loop():
         sleep_time = max(0, UPDATE_INTERVAL - (time.time() - start_time))
         time.sleep(sleep_time)
         
-def start_logic():
+def video_record_loop():
+    global frame_number
+    global SCRINSHOT_START_SLEEP
+    
+    # Рассчитываем задержку между кадрами на основе твоего VIDEO_FPS
+    frame_delay = 1.0 / VIDEO_FPS
+    path = os.path.join(".", "video", new_folder_name)
+    
+    # Сколько нужно снять кадров
+    max_frames = app_config.max_frames
+    
+    # Сначала один раз создаем папку
+    create_folder(video_flag, new_folder_name)
+
+    # Сброс счётчиков перед началом записи
+    frame_number = 0
+    SCRINSHOT_START_SLEEP = 0
+
+    while video_flag == 1 and frame_number < max_frames:
+        start_time = time.time()
+    
+        # Управляем фазой "прогрева" через make_scrinshot
+        make_scrinshot(VIDEO_FPS, video_flag, path, SCRINSHOT_START_SLEEP_MAX, create_video_from_images)
+
+        # Выдерживаем точный FPS записи
+        execution_time = time.time() - start_time
+        sleep_time = max(0, frame_delay - execution_time)
+        time.sleep(sleep_time)
+        
+    # После завершения цикла — собираем видео
+    if video_flag == 1 and frame_number >= max_frames:
+        output_path = os.path.join(".", "video", new_folder_name, "result.mp4")
+        video_editor(path, output_path, VIDEO_FPS, create_video_from_images)
+        
+def start_logic(video_flag):
     t1 = threading.Thread(target=spawn_loop, daemon=True)
     t2 = threading.Thread(target=move_loop, daemon=True)
     t3 = threading.Thread(target=delete_loop, daemon=True)
     t4 = threading.Thread(target=collision_loop, daemon=True)
     
+    t_video = threading.Thread(target=video_record_loop, daemon=True)
+    
     t1.start()
     t2.start()
     t3.start()
     t4.start()
+    
+    if video_flag == 1:
+        t_video.start()
+    else:
+        pass
     
     return t1, t2, t3, t4
