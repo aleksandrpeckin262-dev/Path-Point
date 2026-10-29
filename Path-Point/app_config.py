@@ -3,8 +3,8 @@ point_speed_x = 0
 point_speed_y = 0
 tik_rate = 0.001
 spawn_interval = 0.01
-video_FPS = 10
-max_frames = 150
+video_FPS = 30
+max_frames = 220
 
 
 scrinshot_start_sleep = 20 # Кадров
