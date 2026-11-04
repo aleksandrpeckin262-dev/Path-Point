@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 from video_editor import create_video_from_images
 
-# --- Шаг 1: Подключение скомпилированной C-библиотеки ---
+# --- Подключение к dll ---
 dll_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "physics.dll")
 try:
     physics = ctypes.CDLL(dll_path)
@@ -19,7 +19,7 @@ except Exception as e:
         f"Убедитесь, что вы скомпилировали его в MSYS2 командой: gcc -O3 -shared physics.c -o physics.dll"
     ) from e
 
-# --- Шаг 2: Описание структур данных C для Python ---
+# --- Описание структур данных C для Python ---
 class PointC(ctypes.Structure):
     _fields_ = [
         ("x", ctypes.c_double),
@@ -42,13 +42,13 @@ if not screen_width or not screen_height:
 
 screen_size = screen_width + screen_height
 
-# Флаг того, что у нас режим записи (1), или режим генерации без записи (0)
-video_flag = 1
+# Флаг записи, 1 - записывать, 0 - не записывать
+video_flag = 0
 
-# Имя папки создаваемое в create_folder
+# Имя создаваемой папки
 new_folder_name = "video_1"
 
-# ФПС для записи видео
+# FPS записываемого видео
 VIDEO_FPS = app_config.video_FPS
 
 # Номер кадра в записи
@@ -138,8 +138,8 @@ collision_pairs = []
 
 SPAWN_INTERVAL = app_config.spawn_interval
 UPDATE_INTERVAL = app_config.tik_rate
-SCRINSHOT_START_SLEEP_MAX = app_config.scrinshot_start_sleep
-SCRINSHOT_START_SLEEP = 0
+SCREENSHOT_START_SLEEP_MAX = app_config.screenshot_start_sleep
+SCREENSHOT_START_SLEEP = 0
 
 points_lock = threading.Lock()
 last_move_time = time.time()
@@ -171,7 +171,6 @@ def spawn_point():
     with points_lock:
         active_points.append((position_x, position_y, point_rotation, point_speed_x, point_speed_y))
 
-# --- Измененные функции с гарантированным сохранением ссылок ---
 def update_position(dt):
     if not active_points:
         return
@@ -187,7 +186,7 @@ def update_position(dt):
                 ctypes.c_double(p[4])
             )
         physics.update_position_c(c_array, ctypes.c_int32(count), ctypes.c_double(dt))
-        # ВАЖНО: Обновляем старый список на месте, не создавая новый объект в памяти!
+        # Обновляем старый список на месте не создавая новый объект в памяти
         for i in range(count):
             p = c_array[i]
             active_points[i] = (float(p.x), float(p.y), float(p.rotation), float(p.speed_x), float(p.speed_y))
@@ -240,7 +239,7 @@ def delete_point():
                 
 def create_folder(video_flag, new_folder_name):
     if video_flag == 1:
-        # Собираем путь к нужной папке (например, ./video/video_1)
+        # Собираем путь к нужной папке
         path = os.path.join(".", "video", new_folder_name)
     
         # Проверяем, существует ли папка, и создаем ее
@@ -252,24 +251,22 @@ def create_folder(video_flag, new_folder_name):
     else:
         print("Флаг 0!")
         
-def make_scrinshot(video_FPS, video_flag, path, SCRINSHOT_START_SLEEP_MAX, create_video_from_images_func):
+def make_screenshot(video_FPS, video_flag, path, SCREENSHOT_START_SLEEP_MAX, create_video_from_images_func):
     """
-    Управляет фазой "прогрева" симуляции перед началом записи.
     Реальное сохранение кадров происходит в on_draw визуализатора через arcade.get_image(),
     так как OpenGL-контекст доступен только в главном потоке.
     """
-    global SCRINSHOT_START_SLEEP
+    global SCREENSHOT_START_SLEEP
     
     if video_flag != 1:
         return
     
-    # Фаза 1: пропуск начальных кадров (даём симуляции "разогреться")
-    if SCRINSHOT_START_SLEEP < SCRINSHOT_START_SLEEP_MAX:
-        print(f"Пропуск кадра {SCRINSHOT_START_SLEEP}/{SCRINSHOT_START_SLEEP_MAX}")
-        SCRINSHOT_START_SLEEP += 1
+    # пропуск начальных кадров
+    if SCREENSHOT_START_SLEEP < SCREENSHOT_START_SLEEP_MAX:
+        print(f"Пропуск кадра {SCREENSHOT_START_SLEEP}/{SCREENSHOT_START_SLEEP_MAX}")
+        SCREENSHOT_START_SLEEP += 1
         return
     
-    # Фаза 2: симуляция разогрелась, визуализатор сам сохраняет кадры в on_draw
     # Эта функция больше ничего не делает — она просто "разрешила" запись
     return
 
@@ -326,7 +323,7 @@ def video_record_loop():
     global frame_number
     global SCRINSHOT_START_SLEEP
     
-    # Рассчитываем задержку между кадрами на основе твоего VIDEO_FPS
+    # Рассчитываем задержку между кадрами на основе VIDEO_FPS
     frame_delay = 1.0 / VIDEO_FPS
     path = os.path.join(".", "video", new_folder_name)
     
@@ -344,7 +341,7 @@ def video_record_loop():
         start_time = time.time()
     
         # Управляем фазой "прогрева" через make_scrinshot
-        make_scrinshot(VIDEO_FPS, video_flag, path, SCRINSHOT_START_SLEEP_MAX, create_video_from_images)
+        make_screenshot(VIDEO_FPS, video_flag, path, SCREENSHOT_START_SLEEP_MAX, create_video_from_images)
 
         # Выдерживаем точный FPS записи
         execution_time = time.time() - start_time
@@ -356,7 +353,9 @@ def video_record_loop():
         output_path = os.path.join(".", "video", new_folder_name, "result.mp4")
         video_editor(path, output_path, VIDEO_FPS, create_video_from_images)
         
-def start_logic(video_flag):
+def start_logic(chosen_video_flag):
+    global video_flag
+    video_flag = chosen_video_flag
     t1 = threading.Thread(target=spawn_loop, daemon=True)
     t2 = threading.Thread(target=move_loop, daemon=True)
     t3 = threading.Thread(target=delete_loop, daemon=True)

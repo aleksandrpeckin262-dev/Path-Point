@@ -4,7 +4,7 @@ import app_config
 
 def create_video_from_images(image_folder: str, output_path: str, fps) -> bool:
     """
-    Склеивает изображения из папки в один видеофайл высокого качества.
+    Склеивает изображения из папки в один видеофайл.
     
     :param image_folder: Путь к папке с фотографиями.
     :param output_path: Путь для сохранения готового видео (например, 'res.mp4').
@@ -35,18 +35,19 @@ def create_video_from_images(image_folder: str, output_path: str, fps) -> bool:
     # Пробуем кодек H.264 (avc1) - лучшее качество
     fourcc = cv2.VideoWriter_fourcc(*'avc1')
     video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-
-    # Если avc1 не открылся, пробуем XVID
+    
+    # Если avc1 не открылся, пробуем mp4v
     if not video.isOpened():
-        print("avc1 не поддерживается, пробую XVID...")
+        print("avc1 не поддерживается, пробую mp4v...")
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    # Если mp4v не открылся, пробуем XVID
+    if not video.isOpened():
+        print("mp4v не поддерживается, пробую XVID...")
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
-    # Если XVID не открылся, пробуем mp4v
-    if not video.isOpened():
-        print("XVID не поддерживается, пробую mp4v...")
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     if not video.isOpened():
         print("Критическая ошибка: Не удалось инициализировать VideoWriter")

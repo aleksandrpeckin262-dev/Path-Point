@@ -44,4 +44,3 @@ __declspec(dllexport) int32_t detect_collisions_c(Point* points, int32_t count, 
     }
     return pair_count;
 }
-

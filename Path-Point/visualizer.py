@@ -1,7 +1,7 @@
 import arcade
 import math
 import os
-import logic  # <-- Импортируем модуль целиком, а не отдельные переменные
+import logic
 from logic import active_points, collision_pairs, points_lock, screen_width, screen_height
 import app_config
 
@@ -38,9 +38,9 @@ class ConstellationWindow(arcade.Window):
                 arcade.draw_circle_filled(x, y, self.point_radius, arcade.color.WHITE)
 
         # --- СОХРАНЕНИЕ КАДРА ЧЕРЕЗ ARCADE ---
-        # Обращаемся к переменным через logic. — тогда видим актуальные значения
+        # Обращаемся к переменным через logic
         if (logic.video_flag == 1
-                and logic.SCRINSHOT_START_SLEEP >= logic.SCRINSHOT_START_SLEEP_MAX
+                and logic.SCREENSHOT_START_SLEEP >= logic.SCREENSHOT_START_SLEEP_MAX
                 and logic.frame_number < app_config.max_frames):
             image = arcade.get_image()
             screenshot_name = f"frame_{logic.frame_number:05d}.png"
