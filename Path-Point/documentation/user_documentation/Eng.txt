@@ -1,0 +1,10 @@
+Path-Point is a free program for generating videos with the constellation effect (Plexus Effect).
+The project is distributed under the Apache-2.0 license.
+
+If you are a regular user and do not modify the program code, you only need 2 files:
+
+1 - config.json, which stores all the values for the program to work; to change the simulation settings, you simply need to modify the required values in this file and save the changes.
+2 - Path_Point.exe - the program file itself, which must be launched to start the video creation and simulation.
+
+You will find the final video in the video_1 subfolder, which is located inside the video folder.
+All animation frames will be located there, with the ready-made video at the bottom.

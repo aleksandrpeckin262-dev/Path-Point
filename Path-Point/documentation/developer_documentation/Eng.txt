@@ -1,0 +1,31 @@
+Path-Point is an open-source project for creating videos with the Plexus Effect.
+The project is distributed under the Apache-2.0 license.
+The entire project is written in Python and C; Python accounts for 94.8% of the code, while C is used to accelerate computations.
+To change the simulation parameters, it is necessary to modify the parameters in app_config.py.
+
+List of libraries used in the project:
+1 - arcade
+2 - random------------for parameter randomization
+3 - math--------------for more complex calculations
+4 - threading---------for multithreading
+5 - os----------------for creating folders
+7 - ctypes------------for connecting C code and Python code
+8 - time--------------for creating delays
+9 - cv2---------------for stitching the acquired frames together
+
+The project consists of several files:
+1 - app_config.py - configuration of parameters for project operation,-----------------------------file size - 149 lines.
+2 - main.py - file to launch the project,-----------------------------------------------------file size - 10 lines.
+3 - logic.py - file with all the main logic,-----------------------------------------------file size - 376 lines.
+4 - video_editor.py - file for stitching the acquired frames into a video,--------------------------file size - 77 lines.
+5 - visualizer.py - file for recording video and drawing lines,-------------------------------file size - 61 lines.
+6 - physics.dll - file that takes over part of the calculations (compiled version of physics.c).
+7 - physics.c - file that takes over part of the calculations,-------------------------------------file size - 46 lines.
+8 - config.json - file with all parameters, from which they are loaded into app_config.py,-------file size - 91 lines.
+
+During project operation, a subfolder named video_1 is created inside the video folder, which will contain all animation frames, and afterwards, the animation video stitched from the frames.
+
+Small nuances:
+It is worth noting that the program waits for 20 frames before starting to save frames; this is done because without it, a couple of frames manage to be created when the program window is not yet open or is just opening.
+I would also note that delta time is used for delays.
+Also, the program supports different video codecs (avc1, XVID, mp4v).
