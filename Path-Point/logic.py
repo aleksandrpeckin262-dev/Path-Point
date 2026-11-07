@@ -1,3 +1,4 @@
+
 import random
 import time
 import math
@@ -8,6 +9,11 @@ import ctypes
 import os
 from datetime import datetime
 from video_editor import create_video_from_images
+
+if getattr(sys, 'frozen', False):
+    _root_dir = os.path.dirname(sys.executable)
+else:
+    _root_dir = os.path.dirname(os.path.abspath(__file__))
 
 # --- Подключение к dll ---
 dll_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "physics.dll")
@@ -144,8 +150,9 @@ SCREENSHOT_START_SLEEP = 0
 points_lock = threading.Lock()
 last_move_time = time.time()
 
-TARGET_FOLDER = r"D:\Path-Point\video\video_1"
-RESULT_VIDEO = r"D:\Path-Point\video\video_1\result.mp4"
+# Пути теперь вычисляются абсолютно от папки запуска программы
+TARGET_FOLDER = os.path.join(_root_dir, "video", "video_1")
+RESULT_VIDEO = os.path.join(TARGET_FOLDER, "result.mp4")
 
 def spawn_point():
     position = random.randint(0, 7)
@@ -186,7 +193,6 @@ def update_position(dt):
                 ctypes.c_double(p[4])
             )
         physics.update_position_c(c_array, ctypes.c_int32(count), ctypes.c_double(dt))
-        # Обновляем старый список на месте не создавая новый объект в памяти
         for i in range(count):
             p = c_array[i]
             active_points[i] = (float(p.x), float(p.y), float(p.rotation), float(p.speed_x), float(p.speed_y))
@@ -222,7 +228,6 @@ def detect_collisions():
             idx2 = c_pairs[i].index2
             if idx1 < count and idx2 < count:
                 new_pairs.append((active_points[idx1], active_points[idx2]))
-        # Полностью перезаписываем содержимое глобального списка коллизий
         collision_pairs.clear()
         collision_pairs.extend(new_pairs)
 
@@ -239,12 +244,11 @@ def delete_point():
                 
 def create_folder(video_flag, new_folder_name):
     if video_flag == 1:
-        # Собираем путь к нужной папке
-        path = os.path.join(".", "video", new_folder_name)
+        # Абсолютный независимый путь
+        path = os.path.join(_root_dir, "video", new_folder_name)
     
-        # Проверяем, существует ли папка, и создаем ее
         if not os.path.exists(path):
-            os.mkdir(path)
+            os.makedirs(path, exist_ok=True)
             print(f"Папка успешно создана: {path}")
         else:
             print("Такая папка уже есть!")
@@ -252,22 +256,15 @@ def create_folder(video_flag, new_folder_name):
         print("Флаг 0!")
         
 def make_screenshot(video_FPS, video_flag, path, SCREENSHOT_START_SLEEP_MAX, create_video_from_images_func):
-    """
-    Реальное сохранение кадров происходит в on_draw визуализатора через arcade.get_image(),
-    так как OpenGL-контекст доступен только в главном потоке.
-    """
     global SCREENSHOT_START_SLEEP
     
     if video_flag != 1:
         return
     
-    # пропуск начальных кадров
     if SCREENSHOT_START_SLEEP < SCREENSHOT_START_SLEEP_MAX:
         print(f"Пропуск кадра {SCREENSHOT_START_SLEEP}/{SCREENSHOT_START_SLEEP_MAX}")
         SCREENSHOT_START_SLEEP += 1
         return
-    
-    # Эта функция больше ничего не делает — она просто "разрешила" запись
     return
 
 def video_editor(image_folder, output_path, VIDEO_FPS, create_video_from_images_func):
@@ -321,36 +318,28 @@ def collision_loop():
         
 def video_record_loop():
     global frame_number
-    global SCRINSHOT_START_SLEEP
+    global SCREENSHOT_START_SLEEP
     
-    # Рассчитываем задержку между кадрами на основе VIDEO_FPS
     frame_delay = 1.0 / VIDEO_FPS
-    path = os.path.join(".", "video", new_folder_name)
-    
-    # Сколько нужно снять кадров
+    path = os.path.join(_root_dir, "video", new_folder_name)
     max_frames = app_config.max_frames
     
-    # Сначала один раз создаем папку
     create_folder(video_flag, new_folder_name)
 
-    # Сброс счётчиков перед началом записи
     frame_number = 0
-    SCRINSHOT_START_SLEEP = 0
+    SCREENSHOT_START_SLEEP = 0
 
     while video_flag == 1 and frame_number < max_frames:
         start_time = time.time()
     
-        # Управляем фазой "прогрева" через make_scrinshot
         make_screenshot(VIDEO_FPS, video_flag, path, SCREENSHOT_START_SLEEP_MAX, create_video_from_images)
 
-        # Выдерживаем точный FPS записи
         execution_time = time.time() - start_time
         sleep_time = max(0, frame_delay - execution_time)
         time.sleep(sleep_time)
         
-    # После завершения цикла — собираем видео
     if video_flag == 1 and frame_number >= max_frames:
-        output_path = os.path.join(".", "video", new_folder_name, "result.mp4")
+        output_path = os.path.join(_root_dir, "video", new_folder_name, "result.mp4")
         video_editor(path, output_path, VIDEO_FPS, create_video_from_images)
         
 def start_logic(chosen_video_flag):
@@ -370,7 +359,5 @@ def start_logic(chosen_video_flag):
     
     if video_flag == 1:
         t_video.start()
-    else:
-        pass
-    
+        
     return t1, t2, t3, t4

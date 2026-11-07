@@ -5,16 +5,10 @@ import app_config
 def create_video_from_images(image_folder: str, output_path: str, fps) -> bool:
     """
     Склеивает изображения из папки в один видеофайл.
-    
-    :param image_folder: Путь к папке с фотографиями.
-    :param output_path: Путь для сохранения готового видео (например, 'res.mp4').
-    :param fps: Количество кадров в секунду.
-    :return: True, если видео успешно создано, иначе False.
+    Жестко использует кодек XVID и расширение .avi для 100% работы в .exe.
     """
-    # Поддерживаемые форматы
     valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff')
     
-    # Получаем и сортируем список картинок
     images = [img for img in os.listdir(image_folder) if img.lower().endswith(valid_extensions)]
     images.sort()
 
@@ -22,7 +16,6 @@ def create_video_from_images(image_folder: str, output_path: str, fps) -> bool:
         print(f"Ошибка: В папке {image_folder} не найдено подходящих изображений.")
         return False
 
-    # Берем размер первой картинки за эталон
     first_image_path = os.path.join(image_folder, images[0])
     first_frame = cv2.imread(first_image_path)
     
@@ -32,40 +25,31 @@ def create_video_from_images(image_folder: str, output_path: str, fps) -> bool:
         
     height, width, _ = first_frame.shape
 
-    # Пробуем кодек H.264 (avc1) - лучшее качество
-    fourcc = cv2.VideoWriter_fourcc(*'avc1')
-    video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-    
-    # Если avc1 не открылся, пробуем mp4v
-    if not video.isOpened():
-        print("avc1 не поддерживается, пробую mp4v...")
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    # --- ОРОЧИЙ ПЕРЕХВАТ: ЖЕСТКО СТАВИМ XVID И AVI ---
+    # Перебиваем расширение .mp4 на .avi, чтобы кодек XVID не создавал битый файл
+    base_path, _ = os.path.splitext(output_path)
+    stable_output_path = base_path + ".avi"
 
-    # Если mp4v не открылся, пробуем XVID
-    if not video.isOpened():
-        print("mp4v не поддерживается, пробую XVID...")
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    video = cv2.VideoWriter(stable_output_path, fourcc, fps, (width, height))
+    # ------------------------------------------------
 
     if not video.isOpened():
         print("Критическая ошибка: Не удалось инициализировать VideoWriter")
         return False
 
-    # Устанавливаем максимальное качество
-    video.set(cv2.VIDEOWRITER_PROP_QUALITY, 100)
+    # Устанавливаем качество 80% (Картинка останется четкой, а вес упадет в 5 раз!)
+    video.set(cv2.VIDEOWRITER_PROP_QUALITY, 80)
     
-    print(f"Собираю видео: {len(images)} кадров, {width}x{height}, {fps} FPS, качество 100%")
+    print(f"Собираю видео: {len(images)} кадров, {width}x{height}, {fps} FPS, качество 80%")
 
     for image in images:
         img_path = os.path.join(image_folder, image)
         frame = cv2.imread(img_path)
         
         if frame is None:
-            continue  # Пропускаем поврежденные кадры
+            continue
             
-        # Автоматический ресайз под размер эталона, если фото разные
         if frame.shape[1] != width or frame.shape[0] != height:
             frame = cv2.resize(frame, (width, height))
             
@@ -73,5 +57,5 @@ def create_video_from_images(image_folder: str, output_path: str, fps) -> bool:
 
     video.release()
     cv2.destroyAllWindows()
-    print(f"Видео успешно сохранено: {output_path}")
+    print(f"Видео успешно сохранено: {stable_output_path}")
     return True

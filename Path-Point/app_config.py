@@ -2,9 +2,16 @@
 
 import json
 import os
+import sys
 
-# Загрузка конфигурации из JSON
-_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+# Находим папку, в которой лежит сам файл запуска .exe на столе
+if getattr(sys, 'frozen', False):
+    _base_dir = os.path.dirname(sys.executable)
+else:
+    _base_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Загрузка конфигурации строго из внешней папки
+_config_path = os.path.join(_base_dir, "config.json")
 with open(_config_path, "r", encoding="utf-8") as _f:
     _cfg = json.load(_f)
 
@@ -22,68 +29,63 @@ max_frames = _get("max_frames", 150)
 screenshot_start_sleep = _get("scrinshot_start_sleep", 20) # Кадры
 
 # Настройка позиций спавна точек
-# Y=0 - низ экрана, Y=100 - верх
-
-# ВАЖНО: Все размеры указываются в том, на сколько нужно поделить размер монитора
-
-point_position_0_X = _get("point_position_0_X", 0)    # Левый край, центр
+point_position_0_X = _get("point_position_0_X", 0)
 point_position_0_Y = _get("point_position_0_Y", 50)
 
-point_position_1_X = _get("point_position_1_X", 100)  # Правый край, центр
+point_position_1_X = _get("point_position_1_X", 100)
 point_position_1_Y = _get("point_position_1_Y", 50)
 
-point_position_2_X = _get("point_position_2_X", 0)    # Левый ВЕРХ
+point_position_2_X = _get("point_position_2_X", 0)
 point_position_2_Y = _get("point_position_2_Y", 100)
 
-point_position_3_X = _get("point_position_3_X", 100)  # Правый ВЕРХ
+point_position_3_X = _get("point_position_3_X", 100)
 point_position_3_Y = _get("point_position_3_Y", 100)
 
-point_position_4_X = _get("point_position_4_X", 0)    # Левый низ
+point_position_4_X = _get("point_position_4_X", 0)
 point_position_4_Y = _get("point_position_4_Y", 0)
 
-point_position_5_X = _get("point_position_5_X", 100)  # Правый НИЗ
+point_position_5_X = _get("point_position_5_X", 100)
 point_position_5_Y = _get("point_position_5_Y", 0)
 
-point_position_6_X = _get("point_position_6_X", 50)   # Центр НИЗА
+point_position_6_X = _get("point_position_6_X", 50)
 point_position_6_Y = _get("point_position_6_Y", 0)
 
-point_position_7_X = _get("point_position_7_X", 50)   # Центр ВЕРХА
+point_position_7_X = _get("point_position_7_X", 50)
 point_position_7_Y = _get("point_position_7_Y", 100)
 
 # Изначальные повороты точек
-# Угол 0° = вправо, 90° = вверх, 180° = влево, -90° = вниз
-point_rotation_0 = _get("point_rotation_0", 0)      # Левый центр → ВПРАВО
-point_rotation_1 = _get("point_rotation_1", 180)    # Правый центр → ВЛЕВО
-point_rotation_2 = _get("point_rotation_2", -45)    # Левый ВЕРХ → ВПРАВО-ВНИЗ
-point_rotation_3 = _get("point_rotation_3", -135)   # Правый ВЕРХ → ВЛЕВО-ВНИЗ
-point_rotation_4 = _get("point_rotation_4", 45)     # Левый НИЗ → ВПРАВО-ВВЕРХ
-point_rotation_5 = _get("point_rotation_5", 135)    # Правый НИЗ → ВЛЕВО-ВВЕРХ
-point_rotation_6 = _get("point_rotation_6", 90)     # Центр НИЗА → ВВЕРХ
-point_rotation_7 = _get("point_rotation_7", -90)    # Центр ВЕРХА → ВНИЗ
+point_rotation_0 = _get("point_rotation_0", 0)
+point_rotation_1 = _get("point_rotation_1", 180)
+point_rotation_2 = _get("point_rotation_2", -45)
+point_rotation_3 = _get("point_rotation_3", -135)
+point_rotation_4 = _get("point_rotation_4", 45)
+point_rotation_5 = _get("point_rotation_5", 135)
+point_rotation_6 = _get("point_rotation_6", 90)
+point_rotation_7 = _get("point_rotation_7", -90)
 
 # Погрешность поворота (сектор разлёта)
-point_rotation_0_max = _get("point_rotation_0_max", 90)   # База 0: от -90° до 90° (вправо)
+point_rotation_0_max = _get("point_rotation_0_max", 90)
 point_rotation_0_min = _get("point_rotation_0_min", -90)
 
-point_rotation_1_max = _get("point_rotation_1_max", 90)   # База 1: от 90° до 270° (влево)
+point_rotation_1_max = _get("point_rotation_1_max", 90)
 point_rotation_1_min = _get("point_rotation_1_min", -90)
 
-point_rotation_2_max = _get("point_rotation_2_max", 45)   # База 2: от -90° до 0° (вправо-вниз)
+point_rotation_2_max = _get("point_rotation_2_max", 45)
 point_rotation_2_min = _get("point_rotation_2_min", -45)
 
-point_rotation_3_max = _get("point_rotation_3_max", 45)   # от -180° до -90° (влево-вниз)
+point_rotation_3_max = _get("point_rotation_3_max", 45)
 point_rotation_3_min = _get("point_rotation_3_min", -45)
 
-point_rotation_4_max = _get("point_rotation_4_max", 45)   # от 0° до 90° (вправо-вверх)
+point_rotation_4_max = _get("point_rotation_4_max", 45)
 point_rotation_4_min = _get("point_rotation_4_min", -45)
 
-point_rotation_5_max = _get("point_rotation_5_max", 45)   # от 90° до 180° (влево-вверх)
+point_rotation_5_max = _get("point_rotation_5_max", 45)
 point_rotation_5_min = _get("point_rotation_5_min", -45)
 
-point_rotation_6_max = _get("point_rotation_6_max", 90)   # от 0° до 180° (вверх)
+point_rotation_6_max = _get("point_rotation_6_max", 90)
 point_rotation_6_min = _get("point_rotation_6_min", -90)
 
-point_rotation_7_max = _get("point_rotation_7_max", 90)   # от -180° до 0° (вниз)
+point_rotation_7_max = _get("point_rotation_7_max", 90)
 point_rotation_7_min = _get("point_rotation_7_min", -90)
 
 # Настройка погрешности рандома позиций
@@ -146,4 +148,4 @@ line_alpha_near = _get("line_alpha_near", 255)
 line_alpha_far = _get("line_alpha_far", 1)
 
 # Очистка временных переменных
-del _config_path, _f, _cfg, _get
+del _base_dir, _config_path, _f, _cfg, _get

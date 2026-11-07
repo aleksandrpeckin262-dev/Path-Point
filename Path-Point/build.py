@@ -1,49 +1,43 @@
-import subprocess
-import sys
+import PyInstaller.__main__
 import os
+import shutil
 
-print("=" * 50)
-print("Сборка проекта Path-Point в .exe (onefile)")
-print("=" * 50)
+# НАХОДИМ КОРЕНЬ ПРОЕКТА
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Шаг 1: Удаляем конфликтующий пакет pathlib
-print("\n[1/2] Проверяем и удаляем конфликтующий пакет pathlib...")
-subprocess.run([sys.executable, "-m", "pip", "uninstall", "pathlib", "-y"], 
-               capture_output=True)
-print("✓ pathlib удален (если был установлен)")
+# ЖЕСТКИЙ СНОС ВСЕХ СКРЫТЫХ ПАПОК КЭША И БИЛДОВ
+# (Уничтожаем кэш самого Питона и временные папки сборщика)
+for root, dirs, files in os.walk(BASE_DIR):
+    for d in dirs:
+        if d in ['__pycache__', 'build', 'dist', '.pytest_cache']:
+            try:
+                shutil.rmtree(os.path.join(root, d))
+            except Exception:
+                pass
 
-# Шаг 2: Запускаем сборку в режиме onefile
-print("\n[2/2] Запускаем PyInstaller (onefile)...")
+# ЖЕСТКИЙ СНОС ФАЙЛА СПЕЦИФИКАЦИИ .spec (Из-за него PyInstaller и берет старье!)
+spec_file = os.path.join(BASE_DIR, 'Path_Point.spec')
+if os.path.exists(spec_file):
+    try:
+        os.remove(spec_file)
+    except Exception:
+        pass
 
-cmd = [
-    sys.executable,
-    "-m", "PyInstaller",
-    "--noconfirm",
-    "--onefile",  # <-- ОДИН файл exe
-    "--windowed",
-    "--name", "Path-Point",
-    "--add-binary", "physics.dll;.",  # Включаем C-DLL
-    "--hidden-import", "arcade",
-    "--hidden-import", "cv2",
-    "--hidden-import", "numpy",
-    "--hidden-import", "PIL",
-    "--hidden-import", "video_editor",
-    "--hidden-import", "app_config",
-    "--hidden-import", "logic",
-    "--hidden-import", "visualizer",
-    "main.py"
-]
+print("🔥 Кэш и старые билды полностью выжжены дотла! Начинаем чистую сборку...")
 
-print(f"\nКоманда: {' '.join(cmd)}\n")
+# Запуск чистейшей сборки с нуля
+PyInstaller.__main__.run([
+    os.path.join(BASE_DIR, 'main.py'),
+    '--name=Path_Point',
+    '--onefile',
+    '--windowed',
+    '--clean',  # Внутренняя очистка PyInstaller
+    f'--add-data={os.path.join(BASE_DIR, "physics.dll")}{os.pathsep}.',
+])
 
-result = subprocess.run(cmd, capture_output=False)
-
-if result.returncode == 0:
-    print("\n" + "=" * 50)
-    print("✓ Сборка завершена успешно!")
-    print(f"✓ Готовый .exe находится в: {os.path.join(os.getcwd(), 'dist', 'Path-Point.exe')}")
-    print("=" * 50)
-else:
-    print("\n" + "=" * 50)
-    print("✗ Ошибка при сборке!")
-    print("=" * 50)
+# Автокопирование свежего конфига в новенькую папку dist
+try:
+    shutil.copy(os.path.join(BASE_DIR, 'config.json'), os.path.join(BASE_DIR, 'dist', 'config.json'))
+    print("\n🚀 БАБАХ! Сборка полностью обновлена. Проверяй свежий Path_Point.exe в dist/")
+except Exception as e:
+    print(f"\n⚠️ Не удалось скопировать конфиг: {e}")
